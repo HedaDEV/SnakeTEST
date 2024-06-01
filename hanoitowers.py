@@ -18,7 +18,7 @@ black = (0, 0, 0)
 grey = (120,120,120)
 
 font = pygame.font.Font(None, 36)
-bg = pygame.image.load("bg.jpeg")
+#bg = pygame.image.load("bg.jpeg")
 
 def game_over_screen():
     screen.fill(black)
@@ -123,8 +123,8 @@ while True:
                     reset_game()
         
 
-    #screen.fill(grey)
-    screen.blit(bg, (0, 0))
+    screen.fill(grey)
+    
     for pos in snake_pos:
         pygame.draw.rect(screen, green, pygame.Rect(pos[0], pos[1], 10, 10))
     pygame.draw.rect(screen, red, pygame.Rect(food_pos[0], food_pos[1], 10, 10))
