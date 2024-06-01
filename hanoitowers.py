@@ -11,9 +11,7 @@ header_height = 50
 width, height = 640, 480 + header_height  # Add header height to the total window height
 screen = pygame.display.set_mode((width, height))
 
-screen = pygame.display.set_mode((width, height))
-
-# Couleurs
+# Colors
 white = (255, 255, 255)
 green = (0, 255, 0)
 red = (255, 0, 0)
@@ -21,9 +19,53 @@ black = (0, 0, 0)
 grey = (120,120,120)
 
 font = pygame.font.Font(None, 36)
-#bg = pygame.image.load("bg.jpeg")
-
 score = 0  # Initialize score
+
+class Snake:
+    def __init__(self, initial_positions, speed=5):
+        self.positions = initial_positions
+        self.direction = 'RIGHT'
+        self.speed = speed
+
+    def move(self):
+        x, y = self.positions[0]
+        if self.direction == 'RIGHT':
+            x += self.speed
+        elif self.direction == 'LEFT':
+            x -= self.speed
+        elif self.direction == 'UP':
+            y -= self.speed
+        elif self.direction == 'DOWN':
+            y += self.speed
+        self.positions.insert(0, (x, y))
+        self.positions.pop()
+
+    def grow(self):
+        self.positions.append(self.positions[-1])
+
+    def draw(self):
+        for position in self.positions:
+            pygame.draw.rect(screen, green, pygame.Rect(position[0], position[1], 10, 10))
+
+    def change_direction(self, new_direction):
+        opposite_directions = {'UP': 'DOWN', 'DOWN': 'UP', 'LEFT': 'RIGHT', 'RIGHT': 'LEFT'}
+        if new_direction != opposite_directions[self.direction]:
+            self.direction = new_direction
+
+class Food:
+    def __init__(self, screen_width, screen_height, header_height):
+        self.screen_width = screen_width
+        self.screen_height = screen_height
+        self.header_height = header_height
+        self.position = self.randomize_position()
+
+    def randomize_position(self):
+        x = random.randrange(1, (self.screen_width // 10)) * 10
+        y = random.randrange(1, ((self.screen_height - self.header_height) // 10)) * 10 + self.header_height
+        return (x, y)
+
+    def draw(self):
+        pygame.draw.rect(screen, red, pygame.Rect(self.position[0], self.position[1], 10, 10))
 
 
 def game_over_screen():
@@ -36,13 +78,12 @@ def game_over_screen():
     screen.blit(restart_text, restart_rect)
     pygame.display.update()
 
-def reset_game():
-    global snake_pos, food_pos, food_spawn, snake_direction, change_direction
-    snake_pos = [[100, 50], [90, 50], [80, 50]]  
-    snake_direction = 'RIGHT'  
-    change_direction = snake_direction
-    food_pos = [random.randrange(1, (width//10)) * 10, random.randrange(1, (height//10)) * 10]
-    food_spawn = True
+def reset_game(snake, food):
+    global score
+    snake.positions = [(100, 150), (90, 150), (80, 150)]
+    snake.direction = 'RIGHT'
+    food.position = food.randomize_position()
+    score = 0
 
 def show_score():
     score_rect_x, score_rect_y, score_rect_width, score_rect_height = 0, 0, width, header_height
@@ -56,18 +97,10 @@ def update_game_area():
     pygame.draw.rect(screen, grey, [0, header_height, width, height - header_height])
 
 
-
-# Initialisation du serpent
-snake_pos = [[100, 50 + header_height], [90, 50 + header_height], [80, 50 + header_height]]  # Adjust the y-coordinate
-snake_direction = 'RIGHT'
-change_direction = snake_direction
-snake_speed = 5  
-
-# Nourriture
-food_pos = [random.randrange(1, (width//10)) * 10, random.randrange(1, (height//10)) * 10]
-food_spawn = True
-
+snake = Snake([(100, 150), (90, 150), (80, 150)])
+food = Food(width, height, header_height)
 clock = pygame.time.Clock()
+
 
 # Fonctions de collision
 def collision_with_foodOLD(snake_head, food):
@@ -92,47 +125,27 @@ while True:
         if event.type == pygame.QUIT:
             pygame.quit()
             sys.exit()
-        if event.type == pygame.KEYDOWN:
-            if event.key == pygame.K_RIGHT and snake_direction != 'LEFT':
-                change_direction = 'RIGHT'
-            if event.key == pygame.K_LEFT and snake_direction != 'RIGHT':
-                change_direction = 'LEFT'
-            if event.key == pygame.K_UP and snake_direction != 'DOWN':
-                change_direction = 'UP'
-            if event.key == pygame.K_DOWN and snake_direction != 'UP':
-                change_direction = 'DOWN'
+        elif event.type == pygame.KEYDOWN:
+            if event.key == pygame.K_RIGHT:
+                snake.change_direction('RIGHT')
+            elif event.key == pygame.K_LEFT:
+                snake.change_direction('LEFT')
+            elif event.key == pygame.K_UP:
+                snake.change_direction('UP')
+            elif event.key == pygame.K_DOWN:
+                snake.change_direction('DOWN')
+            elif event.key == pygame.K_SPACE: # and is in game_over (boolean) ? 
+                reset_game(snake, food)
 
-     # MAJ direction du serpent avant de calculer le mouvement
-    if change_direction in ['RIGHT', 'LEFT', 'UP', 'DOWN']:
-        snake_direction = change_direction
+    snake.move()
 
-
-    # Déplacer le serpent
-    if change_direction == 'RIGHT':
-        snake_head = [snake_pos[0][0] + snake_speed, snake_pos[0][1]]
-    elif change_direction == 'LEFT':
-        snake_head = [snake_pos[0][0] - snake_speed, snake_pos[0][1]]
-    elif change_direction == 'UP':
-        snake_head = [snake_pos[0][0], snake_pos[0][1] - snake_speed]
-    elif change_direction == 'DOWN':
-        snake_head = [snake_pos[0][0], snake_pos[0][1] + snake_speed]
-
-    #snake_pos.insert(0, snake_head)
-
-    if collision_with_food(snake_head, food_pos, tolerance=10):
-        food_spawn = False
+    if collision_with_food(snake.positions[0], food.position, tolerance=10):
+        snake.grow()
         score += 1
-        snake_pos.insert(0, snake_head)
-    else:
-        snake_pos.insert(0, snake_head)
-        snake_pos.pop()
-
-    if not food_spawn:
-        food_pos = [random.randrange(1, (width // 10)) * 10, random.randrange(1, ((height - header_height) // 10)) * 10 + header_height]
-    food_spawn = True
+        food.position = food.randomize_position()
 
 
-    if collision_with_boundaries(snake_head) or collision_with_self(snake_head, snake_pos):
+    if collision_with_boundaries(snake.positions[0]) or collision_with_self(snake.positions[0], snake.positions):
         game_over_screen()
         wait_for_space = True
         while wait_for_space:
@@ -142,14 +155,13 @@ while True:
                     running = False
                 if event.type == pygame.KEYDOWN and event.key == pygame.K_SPACE:
                     wait_for_space = False
-                    reset_game()
+                    reset_game(snake, food)
         
     update_game_area()
     show_score()
     
-    for pos in snake_pos:
-        pygame.draw.rect(screen, green, pygame.Rect(pos[0], pos[1], 10, 10))
-    pygame.draw.rect(screen, red, pygame.Rect(food_pos[0], food_pos[1], 10, 10))
+    snake.draw()
+    food.draw()
 
     pygame.display.update()
     clock.tick(30)  
