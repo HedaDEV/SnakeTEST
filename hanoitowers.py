@@ -7,7 +7,10 @@ pygame.init()
 #note trois difficultes (collision, speed et eliminations bord diff ? )
 
 # Screen config
-width, height = 640, 480
+header_height = 50
+width, height = 640, 480 + header_height  # Add header height to the total window height
+screen = pygame.display.set_mode((width, height))
+
 screen = pygame.display.set_mode((width, height))
 
 # Couleurs
@@ -19,6 +22,9 @@ grey = (120,120,120)
 
 font = pygame.font.Font(None, 36)
 #bg = pygame.image.load("bg.jpeg")
+
+score = 0  # Initialize score
+
 
 def game_over_screen():
     screen.fill(black)
@@ -38,8 +44,21 @@ def reset_game():
     food_pos = [random.randrange(1, (width//10)) * 10, random.randrange(1, (height//10)) * 10]
     food_spawn = True
 
+def show_score():
+    score_rect_x, score_rect_y, score_rect_width, score_rect_height = 0, 0, width, header_height
+    pygame.draw.rect(screen, black, [score_rect_x, score_rect_y, score_rect_width, score_rect_height])
+    score_text = font.render(f'Score: {score}', True, white)
+    text_rect = score_text.get_rect(center=(score_rect_x + score_rect_width // 2, score_rect_y + score_rect_height // 2))
+    screen.blit(score_text, text_rect)
+
+def update_game_area():
+    # Fill only the game area with grey
+    pygame.draw.rect(screen, grey, [0, header_height, width, height - header_height])
+
+
+
 # Initialisation du serpent
-snake_pos = [[100, 50], [90, 50], [80, 50]]  # Head et corps du serpent
+snake_pos = [[100, 50 + header_height], [90, 50 + header_height], [80, 50 + header_height]]  # Adjust the y-coordinate
 snake_direction = 'RIGHT'
 change_direction = snake_direction
 snake_speed = 5  
@@ -60,7 +79,9 @@ def collision_with_food(snake_head, food, tolerance=10):
 
 
 def collision_with_boundaries(snake_head):
-    return snake_head[0] >= width or snake_head[0] < 0 or snake_head[1] >= height or snake_head[1] < 0
+    return (snake_head[0] >= width or snake_head[0] < 0 or
+            snake_head[1] >= height or snake_head[1] < header_height)
+
 
 def collision_with_self(snake_head, snake_body):
     return snake_head in snake_body[1:]
@@ -100,13 +121,14 @@ while True:
 
     if collision_with_food(snake_head, food_pos, tolerance=10):
         food_spawn = False
+        score += 1
         snake_pos.insert(0, snake_head)
     else:
         snake_pos.insert(0, snake_head)
         snake_pos.pop()
 
     if not food_spawn:
-        food_pos = [random.randrange(1, (width//10)) * 10, random.randrange(1, (height//10)) * 10]
+        food_pos = [random.randrange(1, (width // 10)) * 10, random.randrange(1, ((height - header_height) // 10)) * 10 + header_height]
     food_spawn = True
 
 
@@ -122,8 +144,8 @@ while True:
                     wait_for_space = False
                     reset_game()
         
-
-    screen.fill(grey)
+    update_game_area()
+    show_score()
     
     for pos in snake_pos:
         pygame.draw.rect(screen, green, pygame.Rect(pos[0], pos[1], 10, 10))
